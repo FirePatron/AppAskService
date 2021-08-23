@@ -37,6 +37,7 @@ public class MyInitialActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+
         Log.d("Launch firebase","ok");
         //FireBase init
         FirebaseApp.initializeApp(this);
@@ -49,19 +50,14 @@ public class MyInitialActivity extends AppCompatActivity {
         Log.d("OneSignal launch","ok");
         //OneSignal API init
         OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-
         OneSignal.initWithContext(this);
         OneSignal.setAppId(ONESIGNAL_APP_ID);
+
+
+
         uuid = OneSignal.getDeviceState().getUserId();
-
-        AsyncGetTags agt = new AsyncGetTags();
-        agt.start();
-        while(agt.getStatus()){}
-        String tag = agt.getResult();
-
-        Log.d("Tages", tag+"");
-
-        if(tag == null) {
+        Log.d("User id",uuid+" fali");
+        if(uuid == null) {
             try {
                 Log.d("Tages","First init");
                 firstInit();
@@ -70,6 +66,13 @@ public class MyInitialActivity extends AppCompatActivity {
             }
             return;
         }
+        AsyncGetTags agt = new AsyncGetTags();
+        agt.start();
+        while(agt.getStatus()){}
+        String tag = agt.getResult();
+
+        Log.d("Tages", tag+"");
+
         if(tag.equals("Error")){
             openMain();
             return;
@@ -146,6 +149,7 @@ class AsyncReq extends AsyncTask<String, Integer, String> {
 
     @Override
     protected String doInBackground(String... strings) {
+        Log.d("Sending req",strings[0]);
         int statusCode = 403;
         try{
             URL url = new URL(strings[0]);
