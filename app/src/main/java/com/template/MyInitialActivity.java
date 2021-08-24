@@ -236,36 +236,4 @@ class AsyncGetTags extends Thread{
     }
 
 }
-class AsyncInitFromDB extends Thread{
 
-    private boolean status=true;
-    private FirebaseRemoteConfig conf;
-    private Activity context;
-
-    public void setConf(FirebaseRemoteConfig conf, Activity context) {
-        this.conf = conf;
-        this.context = context;
-    }
-
-    @Override
-    public void run() {
-        conf.fetchAndActivate()
-                .addOnCompleteListener(context,task -> {
-                    if (task.isSuccessful()) {
-                        Log.d("Firebases", "Okey");
-                    } else {
-                        Log.d("Firebases", "Massive comic errror");
-                    }
-                    setStatus(false);
-                });
-    }
-
-    public boolean getStatus(){
-        return this.status;
-    }
-
-    private void setStatus(boolean status) {
-        Log.d("Statet", "sec");
-        this.status = status;
-    }
-}
