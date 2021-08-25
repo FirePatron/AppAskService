@@ -165,7 +165,7 @@ class AsyncReq extends AsyncTask<String, Integer, String> {
         try{
             URL url = new URL(strings[0]);
             HttpURLConnection http = (HttpURLConnection)url.openConnection();
-            //http.addRequestProperty("User-Agent",strings[1]);
+            http.addRequestProperty("User-Agent",strings[1]);
             statusCode = http.getResponseCode();
             if(statusCode == 200){
                 InputStream is = http.getInputStream();
