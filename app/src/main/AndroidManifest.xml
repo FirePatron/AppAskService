@@ -16,6 +16,7 @@
         <activity android:name=".MainActivity"/>
         <activity
             android:name=".WebActivity"
+            android:theme="@style/Theme.AppCompat.DayNight.NoActionBar"
             android:exported="true" />
         <activity
             android:name=".MyInitialActivity"

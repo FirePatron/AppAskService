@@ -160,30 +160,27 @@ class AsyncReq extends AsyncTask<String, Integer, String> {
 
     @Override
     protected String doInBackground(String... strings) {
-        Log.d("Firebases",strings[0]);
+        Log.d("FirebasesSend",strings[0]);
         int statusCode = 403;
         try{
             URL url = new URL(strings[0]);
             HttpURLConnection http = (HttpURLConnection)url.openConnection();
-            http.addRequestProperty("User-Agent",strings[1]);
+            //http.addRequestProperty("User-Agent",strings[1]);
             statusCode = http.getResponseCode();
-            http.disconnect();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        Log.d("Tages",statusCode+"");
-        if(statusCode == 200){
-            try(InputStream is = new URL(strings[0]).openStream()) {
+            if(statusCode == 200){
+                InputStream is = http.getInputStream();
                 BufferedReader rd = new BufferedReader(new InputStreamReader(is, Charset.forName("UTF-8")));
                 String jsonText = readAll(rd);
                 JSONObject json = new JSONObject(jsonText);
-                String url = json.getString("url");
-                return url;
-            } catch (JSONException | IOException e) {
-                e.printStackTrace();
+                String resp = json.getString("url");
+                Log.d("Tages",resp+"\n"+jsonText);
+                return resp;
             }
+            http.disconnect();
+        } catch (IOException | JSONException e) {
+            e.printStackTrace();
         }
-
+        Log.d("Tages","Error");
         return "error";
     }
     private static String readAll(Reader rd) throws IOException {
